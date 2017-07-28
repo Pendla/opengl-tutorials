@@ -8,12 +8,34 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Shader.h"
+#include "Camera.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image/stb_image.h>
 
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
+
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+float lastX = 0.0f;
+float lastY = 0.0f;
+bool firstMouse = true;
+void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
+    if (firstMouse) {
+        lastX = xPos;
+        lastY = yPos;
+        firstMouse = false;
+    }
+
+    float deltaX = xPos - lastX;
+    float deltaY = lastY - yPos;
+
+    camera.processMouseInput(deltaX, deltaY);
+
+    lastX = xPos;
+    lastY = yPos;
+}
 
 int main() {
     glfwInit();
@@ -39,6 +61,9 @@ int main() {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
 
     // Workaround for OSX Retina displays
     int width, height;
@@ -155,17 +180,16 @@ int main() {
     }
     stbi_image_free(data);
 
-    glm::mat4 view;
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -4.0f));
+    glm::mat4 proj = glm::perspective(45.0f, (float)width/(float)height, 0.1f, 100.0f);
 
-    glm::mat4 proj;
-    proj = glm::perspective(45.0f, (float)width/(float)height, 0.1f, 100.0f);
-
+    float lastFrame = 0.0f;
+    float deltaTime;
     while (!glfwWindowShouldClose(window)) {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
 
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            glfwSetWindowShouldClose(window, GL_TRUE);
-        }
+        camera.processKeyboardInput(window, deltaTime);
 
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -180,8 +204,10 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, texture2);
         shader.setInt("texture2", 1);
 
-        shader.setMatrix("view", view);
         shader.setMatrix("projection", proj);
+
+        glm::mat4 view = camera.getViewMatrix();
+        shader.setMatrix("view", view);
 
         glBindVertexArray(vao);
 

@@ -7,7 +7,7 @@ set(
         SOURCE_FILES
         main.cpp
         glad.c
-        Shader.h)
+        Shader.h Camera.h)
 add_executable(survival ${SOURCE_FILES})
 
 find_package(OpenGL REQUIRED)
