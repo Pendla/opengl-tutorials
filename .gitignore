@@ -1,4 +1,9 @@
+survival
+deps/glfw/tests/
 build/
+*.cmake
+deps/glfw/src/glfw_config.h
+*.pc
 
 # Created by https://www.gitignore.io/api/c++,clion,cmake
 
