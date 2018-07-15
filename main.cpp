@@ -112,10 +112,10 @@ int main()
 
     glEnable(GL_DEPTH_TEST);
 
-    Shader shader("shaders/shader.vert", "shaders/shader.frag");
+    Shader cubeShader("shaders/shader.vert", "shaders/shader.frag");
     Shader lightShader("shaders/light.vert", "shaders/light.frag");
 
-    float vertices[] = {
+    float cubeVertices[] = {
         // positions          // normals           // texture coords
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
@@ -160,9 +160,24 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
     };
 
-    glm::vec3 cubePositions[] = {
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(2.0f, 1.0f, 2.0f)
+    std::vector<glm::vec3> cubePositions = {
+        glm::vec3( 0.0f,  0.0f,  0.0f),
+        glm::vec3( 2.0f,  5.0f, -15.0f),
+        glm::vec3(-1.5f, -2.2f, -2.5f),
+        glm::vec3(-3.8f, -2.0f, -12.3f),
+        glm::vec3( 2.4f, -0.4f, -3.5f),
+        glm::vec3(-1.7f,  3.0f, -7.5f),
+        glm::vec3( 1.3f, -2.0f, -2.5f),
+        glm::vec3( 1.5f,  2.0f, -2.5f),
+        glm::vec3( 1.5f,  0.2f, -1.5f),
+        glm::vec3(-1.3f,  1.0f, -1.5f)
+    };
+
+    std::vector<glm::vec3> pointLightPositions = {
+        glm::vec3( 0.7f,  0.2f,  2.0f),
+        glm::vec3( 2.3f, -3.3f, -4.0f),
+        glm::vec3(-4.0f,  2.0f, -12.0f),
+        glm::vec3( 0.0f,  0.0f, -3.0f)
     };
 
     unsigned int diffuseMap = loadTexture("textures/container2.png");
@@ -174,13 +189,39 @@ int main()
 
     glGenBuffers(1, &cubeVBO);
     glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        sizeof(cubeVertices),
+        cubeVertices,
+        GL_STATIC_DRAW
+    );
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+    glVertexAttribPointer(
+        0,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        8 * sizeof(float),
+        (void *)0
+    );
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
+    glVertexAttribPointer(
+        1,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        8 * sizeof(float),
+        (void *)(3 * sizeof(float))
+    );
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+    glVertexAttribPointer(
+        2,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        8 * sizeof(float),
+        (void *)(6 * sizeof(float))
+    );
     glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -192,15 +233,32 @@ int main()
 
     glGenBuffers(1, &lightVBO);
     glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        sizeof(cubeVertices),
+        cubeVertices,
+        GL_STATIC_DRAW
+    );
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 8, (void *)0);
+    glVertexAttribPointer(
+        0,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(float) * 8,
+        (void *)0
+    );
     glEnableVertexAttribArray(0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    glm::mat4 proj = glm::perspective(45.0f, (float)width / (float)height, 0.1f, 100.0f);
+    glm::mat4 proj = glm::perspective(
+        45.0f,
+        (float)width / (float)height,
+        0.1f,
+        100.0f
+    );
 
     float lastFrame = 0.0f;
     float deltaTime;
@@ -215,40 +273,78 @@ int main()
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Draw cube
-        shader.use();
-        shader.setMatrix("projection", proj);
-        shader.setMatrix("view", camera.getViewMatrix());
-        shader.setMatrix("model", glm::translate(glm::mat4(), cubePositions[0]));
-        shader.setInt("material.diffuse", 0);
-        shader.setInt("material.specular", 1);
-        shader.setFloat("material.shininess", 64.0f);
+        // Draw cubes
+        cubeShader.use();
+        cubeShader.setVec3("eyePos", camera.mPosition);
 
-        shader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
-        shader.setVec3("light.diffuse", 0.8f, 0.8f, 0.8f);
-        shader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-        shader.setVec3("light.position", cubePositions[1]);
-        shader.setVec3("eyePos", camera.mPosition);
+        cubeShader.setMatrix("projection", proj);
+        cubeShader.setMatrix("view", camera.getViewMatrix());
+
+        cubeShader.setInt("material.diffuse", 0);
+        cubeShader.setInt("material.specular", 1);
+        cubeShader.setFloat("material.shininess", 64.0f);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
+
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, specularMap);
+
         glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(float));
+
+        for(int i = 0; i < cubePositions.size(); i++)
+        {
+            auto &cubePosition = cubePositions[i];
+            for(int j = 0; j < pointLightPositions.size(); j++)
+            {
+                auto &pointLightPosition = pointLightPositions[j];
+                std::string lightName = "pointLights[" + std::to_string(j) + "].";
+                cubeShader.setVec3(lightName + "position", pointLightPosition);
+
+                cubeShader.setVec3(lightName + "ambient", 0.3f, 0.3f, 0.3f);
+                cubeShader.setVec3(lightName + "diffuse", 0.8f, 0.8f, 0.8f);
+                cubeShader.setVec3(lightName + "specular", 1.0f, 1.0f, 1.0f);
+
+                cubeShader.setFloat(lightName + "constant", 1.0f);
+                cubeShader.setFloat(lightName + "linear", 0.09f);
+                cubeShader.setFloat(lightName + "quadratic", 0.032f);
+            }
+
+            glm::mat4 model;
+            model = glm::translate(model, cubePositions[i]);
+            float angle = 20.0f * i;
+            model = glm::rotate(
+                model,
+                glm::radians(angle),
+                glm::vec3(1.0f, 0.3f, 0.5f)
+            );
+
+            cubeShader.setMatrix("model", model);
+
+            glDrawArrays(GL_TRIANGLES, 0, sizeof(cubeVertices) / sizeof(float));
+        }
+
+        cubeShader.setVec3("dirLight.direction", 0.5f, 0.5f, 0.5f);
+        cubeShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+        cubeShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+        cubeShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
         // Draw light
         lightShader.use();
         lightShader.setMatrix("projection", proj);
         lightShader.setMatrix("view", camera.getViewMatrix());
 
-        glm::mat4 model;
-        model = glm::translate(model, cubePositions[1]);
-        model = glm::scale(model, glm::vec3(0.2f));
-        lightShader.setMatrix("model", model);
-
         glBindVertexArray(lightVAO);
-        glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(float));
+
+        for(auto &pointLightPosition : pointLightPositions)
+        {
+            glm::mat4 model;
+            model = glm::translate(model, pointLightPosition);
+            model = glm::scale(model, glm::vec3(0.2f));
+            lightShader.setMatrix("model", model);
+
+            glDrawArrays(GL_TRIANGLES, 0, sizeof(cubeVertices) / sizeof(float));
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
